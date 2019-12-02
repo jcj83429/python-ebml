@@ -232,7 +232,7 @@ class ElementSegment(ElementMaster):
         "Iterate over the children of the Chapters element, if any."
         elt = self.child_named('Chapters')
         if elt is None:
-            raise StopIteration
+            return
         yield from elt.children_named('EditionEntry')
     @property
     def chapters(self):
