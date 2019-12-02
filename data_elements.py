@@ -237,7 +237,10 @@ class ElementSegment(ElementMaster):
     @property
     def chapters(self):
         "Iterate over the ChapterAtom children of the first EditionEntry."
-        edition = next(self.editions)  # May raise StopIteration
+        try:
+            edition = next(self.editions)  # May raise StopIteration
+        except StopIteration:
+            return
         yield from edition.chapters
 
     # Manipulating children
