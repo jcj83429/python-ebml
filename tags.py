@@ -284,7 +284,7 @@ class TagDict(Mapping):
                 "values": {0 : 'Matroska Script', 1 : 'DVD-menu'},
             },
             "SimpleBlock": {
-                "cls": ElementUnsupported,
+                "cls": ElementRaw,
             },
             "Block": {
                 "cls": ElementUnsupported,

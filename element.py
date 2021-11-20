@@ -817,6 +817,11 @@ class ElementMaster(Element, Container):
         """Like check_consistency() but skip allowedness checks."""
         Container.check_consecutivity(self, child_consistency)
         # Check end of last element
+        if self.size is None:
+            if self.name != "Segment":
+                raise Inconsistent("Unknown size only implemented for Segment")
+            # size is unspecified
+            return
         if len(self) > 0:
             last_end = self.end_last_child
             difference = self.size - last_end

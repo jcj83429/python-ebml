@@ -73,8 +73,9 @@ class ElementEBML(ElementMaster):
         "Check if we support writing the file."
         return self.version <= 1 and self.max_id_length == 4 and \
             self.max_size_length == 8 and \
-            self.doc_type.lower() == 'matroska' and \
-            self.doc_type_version <= 4
+            ((self.doc_type.lower() == 'matroska' and \
+              self.doc_type_version <= 4) or 
+             self.doc_type.lower() == 'webm')
 
 
 class ElementSegment(ElementMaster):
