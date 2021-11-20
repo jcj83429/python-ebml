@@ -208,6 +208,8 @@ class ElementSegment(ElementMaster):
 
     def duration_getter(self, child):
         "Get child.duration, scaling to seconds."
+        if child.duration is None:
+            return None
         return child.duration * self.timecode_scale / 1e9
     def duration_setter(self, child, val):
         "Set child.duration, scaling to seconds."
@@ -290,7 +292,8 @@ class ElementSegment(ElementMaster):
             ret += ind_str + "Segment UID: {}\n".format(hex_bytes(self.uid))
         if self.title is not None:
             ret += ind_str + "Title:       {!r}\n".format(self.title)
-        ret += ind_str + "Duration:    {:.2f} seconds\n".format(self.duration)
+        if self.duration is not None:
+            ret += ind_str + "Duration:    {:.2f} seconds\n".format(self.duration)
         ret += ind_str + "Time scale:  {} nanoseconds\n" \
             .format(self.timecode_scale)
         ret += ind_str + "Muxing app:  {!r}\n".format(self.muxing_app)
@@ -325,10 +328,16 @@ class ElementSegment(ElementMaster):
 
     def _read_until_clusters(self, stream, cur_pos):
         "Read elements from cur_pos until we hit Clusters or EOS."
-        while cur_pos < self.size:
+        while self.size is None or cur_pos < self.size:
             tag = self.peek_element(stream)
             if tag is None:
-                raise EOFError("Unexpected end of stream at {}".format(cur_pos))
+                if self.size is None:
+                    # For fragmented webm, the segment size is unknown and the
+                    # clusters are not included.
+                    return None
+                else:
+                    raise EOFError("Unexpected end of stream at {}"
+                                   .format(cur_pos))
             if tag.name == 'Cluster': # At clusters
                 return cur_pos
             child = self.read_element(stream, cur_pos,

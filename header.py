@@ -157,8 +157,6 @@ class Header:
         if numbytes_id != numbytes_var_int(ebml_id):
             raise DecodeError("EBML ID not canonically encoded")
         size, raw = read_var_int(stream)
-        if size is None:
-            raise DecodeError("Can't handle reserved EBML size")
         self._ebml_id = ebml_id
         self._size = size
         self._numbytes = numbytes_id + len(raw)

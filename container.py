@@ -715,10 +715,19 @@ class Container(SortedList):
         if seekfirst:
             stream.seek(self.pos_data_absolute + start, SEEK_SET)
         cur_pos = start
-        end = cur_pos + length
-        while cur_pos < end:
-            child = self.read_element(stream, cur_pos, summary=summary,
-                                      seekfirst=False)
+        while length is None or cur_pos < start + length:
+            try:
+                child = self.read_element(stream, cur_pos, summary=summary,
+                                          seekfirst=False)
+            except EOFError:
+                if length is None:
+                    break
+                else:
+                    raise
+            if child.total_size is None and child.name == "Segment":
+                # If the Segment has unknown size, it means it goes all the way
+                # till the end of file. There is nothing after it.
+                break
             cur_pos += child.total_size
 
     def force_dirty(self):

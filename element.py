@@ -151,6 +151,9 @@ class Element:
     @property
     def total_size(self):
         "Return the total size of this element in the stream."
+        if self.size is None:
+            # unknown size
+            return None
         return self.header_size + self.size
     @property
     def level(self):
