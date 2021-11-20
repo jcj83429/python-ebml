@@ -279,6 +279,7 @@ class TagDict(Mapping):
         self['AspectRatioType'].cls = ElementEnum
         self['AspectRatioType'].values \
             = {0 : 'free resizing', 1 : 'keep aspect ratio', 2 : 'fixed'}
+        self['Colour'].cls = ElementUnsupported
         self['Audio'].cls = ElementAudio
         self['OutputSamplingFrequency'].default \
             = self['SamplingFrequency']
