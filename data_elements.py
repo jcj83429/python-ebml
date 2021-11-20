@@ -286,8 +286,10 @@ class ElementSegment(ElementMaster):
     def summary(self, indent=0):
         ret = super().summary(indent) + "\n"
         ind_str = " " * (indent+4)
-        ret += ind_str + "Segment UID: {}\n".format(hex_bytes(self.uid))
-        ret += ind_str + "Title:       {!r}\n".format(self.title)
+        if self.uid is not None:
+            ret += ind_str + "Segment UID: {}\n".format(hex_bytes(self.uid))
+        if self.title is not None:
+            ret += ind_str + "Title:       {!r}\n".format(self.title)
         ret += ind_str + "Duration:    {:.2f} seconds\n".format(self.duration)
         ret += ind_str + "Time scale:  {} nanoseconds\n" \
             .format(self.timecode_scale)
