@@ -3,6 +3,7 @@ Matroska tag processing.
 """
 
 from collections.abc import Mapping
+from copy import deepcopy
 
 __all__ = ['Tag', 'TagDict', 'MATROSKA_TAGS', 'INTERNAL_ID']
 
@@ -130,6 +131,10 @@ class TagDict(Mapping):
     def __init__(self):
         self._dict = {}
         self._initialized = False
+        # Whether tags are valid depdends on the doc type and version
+        # Default to matroska V4
+        self.version = 4
+        self.is_webm = False
 
     def __getitem__(self, key):
         self.delayed_init()
@@ -225,96 +230,187 @@ class TagDict(Mapping):
                  multiple=True, webm=True, minver=1, maxver=4))
 
         for tag_data in MATROSKA_TAG_DATA:
+            # ignore tags that don't apply to our doc type and version
+            if self.is_webm:
+                if not tag_data['webm']:
+                    continue
+            else:
+                if self.version < tag_data['minver'] or\
+                   self.version > tag_data['maxver']:
+                   continue
+            tag_data = deepcopy(tag_data)
             cls_name = tag_data['cls_name']
             del tag_data['cls_name']
             tag_data['cls'] = locals()[cls_name]
             self.insert(Tag(**tag_data))
 
-        # Override some automatically generated values
-        self['EBML'].cls = ElementEBML
-        self['Void'].cls = ElementVoid
-        self['SignedElement'].cls = ElementID
-        self['Segment'].cls = ElementSegment
-        self['Segment'].header_size_min = 8
-        self['Seek'].cls = ElementSeek
-        self['SeekID'].cls = ElementID
-        self['SeekPosition'].data_size_min = 8
-        self['Info'].cls = ElementInfo
-        self['Title'].data_size_min = 100
-        self['EditionEntry'].cls = ElementEditionEntry
-        self['ChapterAtom'].cls = ElementChapterAtom
-        self['ChapterTranslateCodec'].cls = ElementEnum
-        self['ChapterTranslateCodec'].values \
-            = {0 : 'Matroska Script', 1 : 'DVD-menu'}
-        self['SimpleBlock'].cls = ElementUnsupported
-        self['Block'].cls = ElementUnsupported
-        self['BlockVirtual'].cls = ElementUnsupported
-        self['BlockAdditional'].cls = ElementUnsupported
-        self['CodecState'].cls = ElementUnsupported
-        self['EncryptedBlock'].cls = ElementUnsupported
-        self['TrackEntry'].cls = ElementTrackEntry
-        self['TrackType'].cls = ElementEnum
-        self['TrackType'].values \
-            = {0x1 : 'video', 0x2 : 'audio', 0x3 : 'complex', 0x10 : 'logo',
-               0x11 : 'subtitle', 0x12 : 'buttons', 0x20 : 'control'}
-        self['TrackTranslateCodec'].cls = ElementEnum
-        self['TrackTranslateCodec'].values \
-            = {0 : 'Matroska Script', 1 : 'DVD-menu'}
-        self['Video'].cls = ElementVideo
-        self['StereoMode'].cls = ElementEnum
-        self['StereoMode'].values \
-            = {0 : 'mono', 1 : 'side-by-side (left)', 2 : 'top-bottom (right)',
-               3 : 'top-bottom (left)', 4 : 'checkerboard (right)',
-               5 : 'checkerboard (left)', 6 : 'row interleaved (right)',
-               7 : 'row interleaved (left)', 8 : 'col interleaved (right)',
-               9 : 'col interleaved (left)', 10 : 'anaglyph (cyan/red)',
-               11 : 'side-by-side (right)', 12 : 'anaglyph (green/magenta)',
-               13 : 'both (left)', 14 : 'both (right)'}
-        self['DisplayWidth'].default = self['PixelWidth']
-        self['DisplayHeight'].default = self['PixelHeight']
-        self['DisplayUnit'].cls = ElementEnum
-        self['DisplayUnit'].values \
-            = {0 : 'pixels', 1 : 'centimeters',
-               2 : 'inches', 3 : 'Display Aspect Ratio'}
-        self['AspectRatioType'].cls = ElementEnum
-        self['AspectRatioType'].values \
-            = {0 : 'free resizing', 1 : 'keep aspect ratio', 2 : 'fixed'}
-        self['Colour'].cls = ElementUnsupported
-        self['Audio'].cls = ElementAudio
-        self['OutputSamplingFrequency'].default \
-            = self['SamplingFrequency']
-        self['TrackPlaneType'].cls = ElementEnum
-        self['TrackPlaneType'].values \
-            = {0 : 'left eye', 1 : 'right eye', 2 : 'background'}
-        self['ContentEncodingScope'].cls = ElementBitField
-        self['ContentEncodingScope'].values \
-            = ['all-frame-contents', 'track-private-data',
-               'the-next-ContentEncoding']
-        self['ContentEncodingType'].cls = ElementEnum
-        self['ContentEncodingType'].values \
-            = {0 : 'compression', 1 : 'encryption'}
-        self['ContentCompAlgo'].cls = ElementEnum
-        self['ContentCompAlgo'].values \
-            = {0 : 'zlib', 1 : 'bzlib', 2 : 'lzo1x', 3 : 'Header Stripping'}
-        self['ContentEncAlgo'].cls = ElementEnum
-        self['ContentEncAlgo'].values \
-            = {0 : 'signed only', 1 : 'DES', 2 : '3DES', 3 : 'Twofish',
-               4 : 'Blowfish', 5 : 'AES'}
-        self['ContentSigAlgo'].cls = ElementEnum
-        self['ContentSigAlgo'].values \
-            = {0 : 'signed only', 1 : 'RSA'}
-        self['ContentSigHashAlgo'].cls = ElementEnum
-        self['ContentSigHashAlgo'].values \
-            = {0 : 'signed only', 1 : 'SHA1-160', 2 : 'MD5'}
-        self['Cues'].cls = ElementMasterDefer
-        self['Attachments'].header_size_min = 4
-        self['AttachedFile'].cls = ElementAttachedFile
-        self['AttachedFile'].header_size_min = 4
-        self['FileUID'].cls = ElementRaw
-        self['Tag'].cls = ElementTag
-        self['Targets'].cls = ElementTargets
-        self['SimpleTag'].cls = ElementSimpleTag
+        overrides = {
+            "EBML": {
+                "cls": ElementEBML,
+            },
+            "Void": {
+                "cls": ElementVoid,
+            },
+            "SignedElement": {
+                "cls": ElementID,
+            },
+            "Segment": {
+                "cls": ElementSegment,
+                "header_size_min": 8,
+            },
+            "Seek": {
+                "cls": ElementSeek,
+            },
+            "SeekID": {
+                "cls": ElementID,
+            },
+            "SeekPosition": {
+                "data_size_min": 8,
+            },
+            "Info": {
+                "cls": ElementInfo,
+            },
+            "Title": {
+                "data_size_min": 100,
+            },
+            "EditionEntry": {
+                "cls": ElementEditionEntry,
+            },
+            "ChapterAtom": {
+                "cls": ElementChapterAtom,
+            },
+            "ChapterTranslateCodec": {
+                "cls": ElementEnum,
+                "values": {0 : 'Matroska Script', 1 : 'DVD-menu'},
+            },
+            "SimpleBlock": {
+                "cls": ElementUnsupported,
+            },
+            "Block": {
+                "cls": ElementUnsupported,
+            },
+            "BlockVirtual": {
+                "cls": ElementUnsupported,
+            },
+            "BlockAdditional": {
+                "cls": ElementUnsupported,
+            },
+            "CodecState": {
+                "cls": ElementUnsupported,
+            },
+            "EncryptedBlock": {
+                "cls": ElementUnsupported,
+            },
+            "TrackEntry": {
+                "cls": ElementTrackEntry,
+            },
+            "TrackType": {
+                "cls": ElementEnum,
+                "values": {0x1 : 'video', 0x2 : 'audio', 0x3 : 'complex', 0x10 : 'logo', 0x11 : 'subtitle', 0x12 : 'buttons', 0x20 : 'control'},
+            },
+            "TrackTranslateCodec": {
+                "cls": ElementEnum,
+                "values": {0 : 'Matroska Script', 1 : 'DVD-menu'},
+            },
+            "Video": {
+                "cls": ElementVideo,
+            },
+            "StereoMode": {
+                "cls": ElementEnum,
+                "values": {0 : 'mono', 1 : 'side-by-side (left)', 2 : 'top-bottom (right)', 3 : 'top-bottom (left)', 4 : 'checkerboard (right)', 5 : 'checkerboard (left)', 6 : 'row interleaved (right)', 7 : 'row interleaved (left)', 8 : 'col interleaved (right)', 9 : 'col interleaved (left)', 10 : 'anaglyph (cyan/red)', 11 : 'side-by-side (right)', 12 : 'anaglyph (green/magenta)', 13 : 'both (left)', 14 : 'both (right)'},
+            },
+            "DisplayWidth": {
+                "default": self['PixelWidth'],
+            },
+            "DisplayHeight": {
+                "default": self['PixelHeight'],
+            },
+            "DisplayUnit": {
+                "cls": ElementEnum,
+                "values": {0 : 'pixels', 1 : 'centimeters', 2 : 'inches', 3 : 'Display Aspect Ratio'},
+            },
+            "AspectRatioType": {
+                "cls": ElementEnum,
+                "values": {0 : 'free resizing', 1 : 'keep aspect ratio', 2 : 'fixed'},
+            },
+            "Colour": {
+                "cls": ElementVoid,
+            },
+            "Audio": {
+                "cls": ElementAudio,
+            },
+            "OutputSamplingFrequency": {
+                "default": self['SamplingFrequency'],
+            },
+            "TrackPlaneType": {
+                "cls": ElementEnum,
+                "values": {0 : 'left eye', 1 : 'right eye', 2 : 'background'},
+            },
+            "ContentEncodingScope": {
+                "cls": ElementBitField,
+                "values": ['all-frame-contents', 'track-private-data', 'the-next-ContentEncoding'],
+            },
+            "ContentEncodingType": {
+                "cls": ElementEnum,
+                "values": {0 : 'compression', 1 : 'encryption'},
+            },
+            "ContentCompAlgo": {
+                "cls": ElementEnum,
+                "values": {0 : 'zlib', 1 : 'bzlib', 2 : 'lzo1x', 3 : 'Header Stripping'},
+            },
+            "ContentEncAlgo": {
+                "cls": ElementEnum,
+                "values": {0 : 'signed only', 1 : 'DES', 2 : '3DES', 3 : 'Twofish', 4 : 'Blowfish', 5 : 'AES'},
+            },
+            "ContentSigAlgo": {
+                "cls": ElementEnum,
+                "values": {0 : 'signed only', 1 : 'RSA'},
+            },
+            "ContentSigHashAlgo": {
+                "cls": ElementEnum,
+                "values": {0 : 'signed only', 1 : 'SHA1-160', 2 : 'MD5'},
+            },
+            "Cues": {
+                "cls": ElementMasterDefer,
+            },
+            "Attachments": {
+                "header_size_min": 4,
+            },
+            "AttachedFile": {
+                "cls": ElementAttachedFile,
+                "header_size_min": 4,
+            },
+            "FileUID": {
+                "cls": ElementRaw,
+            },
+            "Tag": {
+                "cls": ElementTag,
+            },
+            "Targets": {
+                "cls": ElementTargets,
+            },
+            "SimpleTag": {
+                "cls": ElementSimpleTag,
+            },
+        }
+        for tag_name, tag_overrides in overrides.items():
+            if tag_name not in self:
+                continue
+            tag = self[tag_name]
+            for attr_name, value in tag_overrides.items():
+                setattr(tag, attr_name, value)
 
+    def set_doc_type_and_version(self, doc_type, version):
+        if doc_type == "webm":
+            self.is_webm = True
+        else:
+            assert doc_type == "matroska"
+            self.is_webm = False
+        self.version = version
+        # redo init
+        self._initialized = False
+        self._dict.clear()
+        self.delayed_init()
 
 # This dictionary contains the tags that the parser recognizes.  The tags are
 # Tag instances and the keys are the tag IDs and names.

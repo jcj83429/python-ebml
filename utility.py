@@ -84,6 +84,8 @@ def encode_var_int(number, numbytes=range(1, 9)):
      + ValueError, if the largest value in 'numbytes' is not sufficient to
        encode 'number'.
     """
+    if number is None:
+        return 0x01FFFFFFFFFFFFFF.to_bytes(8, byteorder='big')
     if isinstance(numbytes, int):
         numbytes = [numbytes]
     size = 0

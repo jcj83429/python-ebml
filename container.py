@@ -940,6 +940,8 @@ class File(Container):
         if not ebml.check_read_handled():
             LOG.warning("Header element {} indicates reading the file "
                         "will probably fail".format(ebml))
+        MATROSKA_TAGS.set_doc_type_and_version(ebml.doc_type,
+                                               ebml.doc_type_version)
 
     def read_summary(self):
         """Read a summary of the stream.
