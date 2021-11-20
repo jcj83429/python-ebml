@@ -334,7 +334,7 @@ class TagDict(Mapping):
                 "values": {0 : 'free resizing', 1 : 'keep aspect ratio', 2 : 'fixed'},
             },
             "Colour": {
-                "cls": ElementVoid,
+                "cls": ElementRaw,
             },
             "Audio": {
                 "cls": ElementAudio,
